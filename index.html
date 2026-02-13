@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>نظام تتبع الأجهزة الذكي</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: #f4f7f6; padding: 20px; text-align: center; }
+        .loader { display: none; margin: 20px auto; border: 5px solid #f3f3f3; border-top: 5px solid #3498db; border-radius: 50%; width: 50px; height: 50px; animation: spin 2s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .table-responsive { background: white; border-radius: 10px; padding: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+
+    <h2 class="mb-4">🚀 لوحة تتبع الأجهزة</h2>
+    <div id="loading" class="loader" style="display: block;"></div>
+    
+    <div class="container">
+        <input type="text" id="search" class="form-control mb-3" placeholder="🔍 ابحث عن أي جهاز هنا...">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-dark" id="header"></thead>
+                <tbody id="body"></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    async function init() {
+        try {
+            // تأكد أن اسم الملف هنا مطابق تماماً لاسم الملف في GitHub
+            const response = await fetch('device_traceability.json');
+            if (!response.ok) throw new Error("لم يتم العثور على ملف البيانات");
+            
+            const data = await response.json();
+            const items = data.Sheet1 || []; // سنأخذ أول صفحة
+            
+            document.getElementById('loading').style.display = 'none';
+            render(items);
+
+            document.getElementById('search').oninput = (e) => {
+                const term = e.target.value.toLowerCase();
+                const filtered = items.filter(row => 
+                    Object.values(row).some(v => String(v).toLowerCase().includes(term))
+                );
+                render(filtered);
+            };
+        } catch (err) {
+            document.getElementById('loading').innerHTML = "❌ خطأ: لم تظهر البيانات. تأكد من رفع ملف device_traceability.json";
+            console.error(err);
+        }
+    }
+
+    function render(list) {
+        const head = document.getElementById('header');
+        const body = document.getElementById('body');
+        
+        if (list.length === 0) {
+            body.innerHTML = "<tr><td colspan='5'>لا توجد بيانات</td></tr>";
+            return;
+        }
+
+        const keys = Object.keys(list[0]);
+        head.innerHTML = `<tr>${keys.map(k => `<th>${k}</th>`).join('')}</tr>`;
+        
+        // عرض أول 100 صف فقط لتجنب تجمد المتصفح
+        body.innerHTML = list.slice(0, 100).map(row => `
+            <tr>${keys.map(k => `<td>${row[k] || ''}</td>`).join('')}</tr>
+        `).join('');
+    }
+
+    init();
+</script>
+</body>
+</html>
