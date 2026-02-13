@@ -2,82 +2,67 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>تتبع الأجهزة - نسخة Antigravity</title>
+    <title>نظام تتبع الأجهزة - Antigravity</title>
     <style>
-        /* تصميم داخلي لضمان عدم الحظر */
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; padding: 20px; direction: rtl; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 1100px; margin: auto; }
-        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #eee; padding: 12px; text-align: center; }
-        th { background-color: #007bff; color: white; position: sticky; top: 0; }
-        tr:nth-child(even) { background-color: #f8f9fa; }
-        .error-box { color: #721c24; background: #f8d7da; padding: 15px; border-radius: 8px; margin-bottom: 20px; display: none; }
+        body { font-family: sans-serif; background: #f4f4f9; padding: 20px; direction: rtl; }
+        .container { max-width: 1100px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ccc; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: center; font-size: 14px; }
+        th { background: #007bff; color: white; position: sticky; top: 0; }
+        tr:nth-child(even) { background: #f9f9f9; }
+        .status-msg { padding: 10px; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
-
-<div class="card">
-    <h2>🚀 لوحة تتبع الأجهزة الذكية</h2>
-    <div id="error" class="error-box"></div>
-    <input type="text" id="search" placeholder="🔍 ابحث عن أي جهاز أو حالة...">
-    <div id="loading">جاري جلب البيانات من السحاب...</div>
-    <div style="overflow-x: auto; max-height: 600px;">
-        <table id="dataTable">
-            <thead id="head"></thead>
-            <tbody id="body"></tbody>
-        </table>
+    <div class="container">
+        <h2>🚀 لوحة تتبع الأجهزة</h2>
+        <input type="text" id="search" placeholder="🔍 ابحث عن أي كلمة (رقم تسلسلي، اسم، حالة)...">
+        <div id="msg" class="status-msg">جاري تحميل البيانات...</div>
+        <div style="overflow-x: auto; max-height: 500px;">
+            <table id="mainTable">
+                <thead id="thead"></thead>
+                <tbody id="tbody"></tbody>
+            </table>
+        </div>
     </div>
-</div>
 
-<script>
-    async function init() {
-        const errorDiv = document.getElementById('error');
-        try {
-            // جلب ملف الـ JSON النظيف
-            const res = await fetch('device_traceability.json');
-            if (!res.ok) throw new Error("لم يتم العثور على الملف. تأكد من رفعه باسم device_traceability.json");
-            
-            const data = await res.json();
-            const items = data.Sheet1 || []; // عرض Sheet1 أولاً
+    <script>
+        async function start() {
+            try {
+                const res = await fetch('device_traceability.json');
+                if (!res.ok) throw new Error("ملف البيانات غير موجود");
+                const data = await res.json();
+                
+                // سنعرض الصفحة الأولى تلقائياً (Sheet1)
+                const items = Object.values(data)[0] || []; 
+                
+                document.getElementById('msg').style.display = 'none';
+                display(items);
 
-            document.getElementById('loading').style.display = 'none';
-            render(items);
-
-            // ميزة البحث اللحظي
-            document.getElementById('search').addEventListener('input', (e) => {
-                const term = e.target.value.toLowerCase();
-                const filtered = items.filter(row => 
-                    Object.values(row).some(v => String(v).toLowerCase().includes(term))
-                );
-                render(filtered);
-            });
-
-        } catch (err) {
-            errorDiv.style.display = 'block';
-            errorDiv.innerText = "❌ خطأ: " + err.message;
-            document.getElementById('loading').style.display = 'none';
-        }
-    }
-
-    function render(list) {
-        const head = document.getElementById('head');
-        const body = document.getElementById('body');
-        
-        if (list.length === 0) {
-            body.innerHTML = "<tr><td colspan='100%'>لا توجد بيانات متاحة</td></tr>";
-            return;
+                document.getElementById('search').oninput = (e) => {
+                    const term = e.target.value.toLowerCase();
+                    const filtered = items.filter(row => 
+                        Object.values(row).some(v => String(v).toLowerCase().includes(term))
+                    );
+                    display(filtered);
+                };
+            } catch (err) {
+                document.getElementById('msg').innerHTML = "❌ خطأ في تحميل البيانات. تأكد من رفع ملف device_traceability.json الجديد.";
+                console.error(err);
+            }
         }
 
-        const keys = Object.keys(list[0]);
-        head.innerHTML = `<tr>${keys.map(k => `<th>${k}</th>`).join('')}</tr>`;
-        
-        body.innerHTML = list.map(row => `
-            <tr>${keys.map(k => `<td>${row[k] !== null ? row[k] : ''}</td>`).join('')}</tr>
-        `).join('');
-    }
+        function display(list) {
+            const head = document.getElementById('thead');
+            const body = document.getElementById('tbody');
+            if (list.length === 0) { body.innerHTML = "لا توجد نتائج"; return; }
 
-    init();
-</script>
+            const keys = Object.keys(list[0]);
+            head.innerHTML = `<tr>${keys.map(k => `<th>${k}</th>`).join('')}</tr>`;
+            body.innerHTML = list.map(row => `<tr>${keys.map(k => `<td>${row[k]}</td>`).join('')}</tr>`).join('');
+        }
+        start();
+    </script>
 </body>
 </html>
