@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>نظام تتبع الأجهزة</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 20px; direction: rtl; }
+        .container { max-width: 1000px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        input { width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: right; }
+        th { background-color: #007bff; color: white; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .error-msg { color: red; font-weight: bold; text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🚀 لوحة تتبع الأجهزة</h2>
+        <input type="text" id="searchInput" placeholder="🔍 ابحث عن أي بيانات...">
+        <div id="status">جاري تحميل البيانات...</div>
+        <div id="tableContainer"></div>
+    </div>
+
+    <script>
+        async function loadData() {
+            try {
+                const response = await fetch('device_traceability.json');
+                const data = await response.json();
+                const items = data.Sheet1 || []; 
+
+                document.getElementById('status').style.display = 'none';
+                renderTable(items);
+
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase();
+                    const filtered = items.filter(row => 
+                        Object.values(row).some(v => String(v).toLowerCase().includes(term))
+                    );
+                    renderTable(filtered);
+                });
+            } catch (err) {
+                document.getElementById('status').innerHTML = `<div class="error-msg">❌ خطأ في قراءة البيانات. تأكد من رفع ملف JSON الجديد.</div>`;
+            }
+        }
+
+        function renderTable(data) {
+            if (data.length === 0) {
+                document.getElementById('tableContainer').innerHTML = "لا توجد نتائج.";
+                return;
+            }
+            const keys = Object.keys(data[0]);
+            let html = '<table><thead><tr>';
+            keys.forEach(key => html += `<th>${key}</th>`);
+            html += '</tr></thead><tbody>';
+            data.slice(0, 100).forEach(row => {
+                html += '<tr>';
+                keys.forEach(key => html += `<td>${row[key]}</td>`);
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            document.getElementById('tableContainer').innerHTML = html;
+        }
+
+        loadData();
+    </script>
+</body>
+</html>
